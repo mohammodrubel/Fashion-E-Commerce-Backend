@@ -1,0 +1,33 @@
+Step 1 — SUPER_ADMIN তৈরি
+Complete
+System-এর মূল administrator। Organization তৈরি, subscription plan পরিচালনা, subscription assign এবং সব organization manage করবে।
+
+
+
+
+Step 2 — Organization তৈরি
+SUPER_ADMIN একটি organization তৈরি করবে এবং সেই organization-এর প্রথম ADMIN account তৈরি করবে। Organization-এর সব user ও inventory data আলাদা থাকবে।
+
+
+
+
+Step 3 — Subscription নেওয়া
+Organization-এর ADMIN উপলব্ধ plan দেখবে, একটি plan নির্বাচন করবে এবং subscription request বা payment সম্পন্ন করবে। সফল payment বা অনুমোদনের পরে subscription ACTIVE হবে।
+
+
+
+
+Step 4 — Organization setup
+ADMIN নিজের business profile, warehouse, category, supplier এবং product setup করবে।
+
+
+
+
+Step 5 — Team ও role management
+ADMIN MANAGER ও EMPLOYEE তৈরি করবে এবং প্রত্যেককে অনুমোদিত permission দেবে।
+
+
+
+
+Step 6 — Inventory operations
+Product stock, purchase, order, payment status, warehouse stock movement এবং reports পরিচালনা করবে।
