@@ -58,6 +58,36 @@ const ChangePasswordSchema = z.object({
   }),
 });
 
-const AuthValidation = { LoginSchema, RegisterSchema, ChangePasswordSchema };
+const ForgotPasswordSchema = z.object({
+  body: z.object({
+    email: z
+      .string({ required_error: 'Email is required' })
+      .email('Invalid email format'),
+  }),
+});
+
+const ResetPasswordSchema = z.object({
+  body: z.object({
+    token: z.string({ required_error: 'Token is required' }),
+    password: z
+      .string({ required_error: 'Password is required' })
+      .min(6, 'Password must be at least 6 characters'),
+  }),
+});
+
+const GoogleLoginSchema = z.object({
+  body: z.object({
+    id_token: z.string({ required_error: 'id_token is required' }),
+  }),
+});
+
+const AuthValidation = {
+  LoginSchema,
+  RegisterSchema,
+  ChangePasswordSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
+  GoogleLoginSchema,
+};
 
 export default AuthValidation;

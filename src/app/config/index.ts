@@ -25,4 +25,8 @@ export default {
     api_key: process.env.API_KEY,
     api_secret: process.env.API_SECRET,
   },
+  email_user: process.env.EMAIL_USER,
+  email_pass: process.env.EMAIL_PASS,
+  google_client_id: process.env.GOOGLE_CLIENT_ID,
+  frontend_url: process.env.FRONTEND_URL || 'http://localhost:3000',
 };

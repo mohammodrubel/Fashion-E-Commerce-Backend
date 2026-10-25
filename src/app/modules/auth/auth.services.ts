@@ -2,10 +2,12 @@ import httpStatus from 'http-status';
 import AppError from '../../errors/AppError';
 import prisma from '../../utils/prisma';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import AuthUtils from './auth.utils';
 import config from '../../config';
 import { JwtPayload } from 'jsonwebtoken';
-import { ILogin, IRegister } from './auth.interface';
+import { ILogin, IRegister, IResetPassword, IGoogleLogin } from './auth.interface';
+import { sendPasswordResetEmail } from '../../utils/email';
 
 const Login = async (payload: ILogin) => {
   const user = await prisma.user.findFirst({
@@ -127,10 +129,120 @@ const ChangePassword = async (
   });
 };
 
+const ForgotPassword = async (email: string) => {
+  const user = await prisma.user.findFirst({ where: { email } });
+
+  // Silent success — don't reveal whether email exists
+  if (!user) return;
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      resetPasswordToken: token,
+      resetPasswordTokenExpiry: expiry,
+    },
+  });
+
+  const resetUrl = `${config.frontend_url}/reset-password?token=${token}`;
+  await sendPasswordResetEmail(email, resetUrl);
+};
+
+const ResetPassword = async (payload: IResetPassword) => {
+  const user = await prisma.user.findFirst({
+    where: {
+      resetPasswordToken: payload.token,
+      resetPasswordTokenExpiry: { gt: new Date() },
+    },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid or expired reset token');
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    payload.password,
+    Number(config.bcrypt_salt_rounds),
+  );
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordTokenExpiry: null,
+    },
+  });
+};
+
+const GoogleLogin = async (payload: IGoogleLogin) => {
+  // Verify access_token via Google userinfo endpoint
+  const response = await fetch(
+    `https://www.googleapis.com/oauth2/v3/userinfo`,
+    { headers: { Authorization: `Bearer ${payload.id_token}` } },
+  );
+
+  if (!response.ok) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid Google token');
+  }
+
+  const googleUser = await response.json() as {
+    sub: string;
+    name?: string;
+    email?: string;
+    picture?: string;
+  };
+
+  if (!googleUser.email) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'Google account has no email');
+  }
+
+  let user = await prisma.user.findFirst({
+    where: { email: googleUser.email },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        name: googleUser.name || googleUser.email,
+        email: googleUser.email,
+        passwordHash: '',
+        role: 'USER',
+      },
+    });
+  }
+
+  const jwtPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const access_token = AuthUtils.CreateToken(
+    jwtPayload,
+    config.jwt_access_token_secret as string,
+    config.jwt_access_token_expires_in as string,
+  );
+
+  const refresh_token = AuthUtils.CreateToken(
+    jwtPayload,
+    config.jwt_refresh_token_secret as string,
+    config.jwt_refresh_token_expires_in as string,
+  );
+
+  return { access_token, refresh_token };
+};
+
 const AuthService = {
   Login,
   Register,
   ChangePassword,
+  ForgotPassword,
+  ResetPassword,
+  GoogleLogin,
 };
 
 export default AuthService;

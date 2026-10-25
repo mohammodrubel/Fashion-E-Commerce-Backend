@@ -11,3 +11,16 @@ export interface IRegister {
   password: string;
   role: Role;
 }
+
+export interface IForgotPassword {
+  email: string;
+}
+
+export interface IResetPassword {
+  token: string;
+  password: string;
+}
+
+export interface IGoogleLogin {
+  id_token: string;
+}

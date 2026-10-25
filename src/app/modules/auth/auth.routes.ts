@@ -23,4 +23,22 @@ router.patch(
   AuthController.ChangePassword,
 );
 
+router.post(
+  '/forgot-password',
+  validateRequest(AuthValidation.ForgotPasswordSchema),
+  AuthController.ForgotPassword,
+);
+
+router.post(
+  '/reset-password',
+  validateRequest(AuthValidation.ResetPasswordSchema),
+  AuthController.ResetPassword,
+);
+
+router.post(
+  '/google',
+  validateRequest(AuthValidation.GoogleLoginSchema),
+  AuthController.GoogleLogin,
+);
+
 export const AuthRoutes = router;
