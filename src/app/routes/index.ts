@@ -3,6 +3,7 @@ import { AuthRoutes } from '../modules/auth/auth.routes';
 import { userRouter } from '../modules/user/user.router';
 import { SizeRoutes } from '../modules/size/size.routes';
 import { ColorRoutes } from '../modules/color/color.routes';
+import { CategoryRoutes } from '../modules/category/category.routes';
 
 const router = express.Router();
 
@@ -27,6 +28,10 @@ const routes: Route[] = [
   {
     path: '/color',
     route: ColorRoutes,
+  },
+  {
+    path: '/category',
+    route: CategoryRoutes,
   },
 ];
 

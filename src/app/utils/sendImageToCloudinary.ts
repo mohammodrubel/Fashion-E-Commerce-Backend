@@ -12,7 +12,7 @@ cloudinary.config({
 
 
 
-export const sendImageToCloudinary = (path: string, imageName: string) => {
+export const sendImageToCloudinary = (path: string, imageName: string): Promise<string> => {
 
     return new Promise((resolve, reject) => {
         cloudinary.uploader.upload(
@@ -22,15 +22,16 @@ export const sendImageToCloudinary = (path: string, imageName: string) => {
             },
             function (error, result) {
                 if (error) {
-                    reject(error)
+                    return reject(error)
                 }
-                resolve(result)
+                if (!result) {
+                    return reject(new Error('No response from Cloudinary'))
+                }
                 fs.unlink(path, (error) => {
                     if (error) {
-                        reject(error)
-                    } else {
-                        console.log('file is deleted')
+                        console.warn('Failed to delete local file:', error)
                     }
+                    resolve(result.secure_url)
                 })
             }
         )
