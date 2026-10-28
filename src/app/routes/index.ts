@@ -1,6 +1,8 @@
 import express from 'express';
 import { AuthRoutes } from '../modules/auth/auth.routes';
 import { userRouter } from '../modules/user/user.router';
+import { SizeRoutes } from '../modules/size/size.routes';
+import { ColorRoutes } from '../modules/color/color.routes';
 
 const router = express.Router();
 
@@ -17,6 +19,14 @@ const routes: Route[] = [
   {
     path: '/user',
     route: userRouter,
+  },
+  {
+    path: '/size',
+    route: SizeRoutes,
+  },
+  {
+    path: '/color',
+    route: ColorRoutes,
   },
 ];
 
