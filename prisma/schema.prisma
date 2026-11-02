@@ -106,12 +106,22 @@ model Category {
 }
 
 model Product {
-  id          String        @id @default(cuid())
-  name        String
-  slug        String        @unique
-  description String?
-  status      ProductStatus @default(DRAFT)
-  categoryId  String
+  id               String        @id @default(cuid())
+  name             String
+  slug             String        @unique
+  shortDescription String?
+  description      String?
+  sku              String?       @unique
+  regularPrice     Decimal       @db.Decimal(12, 2)
+  salePrice        Decimal?      @db.Decimal(12, 2)
+  costPrice        Decimal?      @db.Decimal(12, 2)
+  stockQuantity    Int           @default(0)
+  tags             String[]      @default([])
+  isFeatured       Boolean       @default(false)
+  seoTitle         String?
+  seoDescription   String?
+  status           ProductStatus @default(DRAFT)
+  categoryId       String
 
   category    Category      @relation(fields: [categoryId], references: [id])
   images      ProductImage[]
@@ -121,6 +131,8 @@ model Product {
   updatedAt   DateTime      @updatedAt
 
   @@index([categoryId, status])
+  @@index([isFeatured])
+  @@index([status])
 }
 
 model ProductImage {
