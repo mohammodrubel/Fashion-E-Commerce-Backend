@@ -6,6 +6,7 @@ import { ColorRoutes } from '../modules/color/color.routes';
 import { CategoryRoutes } from '../modules/category/category.routes';
 import { ProductRoutes } from '../modules/product/product.routes';
 import { AddressRoutes } from '../modules/address/address.routes';
+import { BannerRoutes } from '../modules/banner/banner.routes';
 
 const router = express.Router();
 
@@ -42,6 +43,10 @@ const routes: Route[] = [
   {
     path: '/address',
     route: AddressRoutes,
+  },
+  {
+    path: '/banner',
+    route: BannerRoutes,
   },
 ];
 

@@ -37,11 +37,15 @@ export type UpdateProductPayload = Partial<CreateProductPayload> & {
 export type ProductFilters = {
   searchTerm?: string;
   category?: string;
+  categoryIds?: string;
   status?: string;
   minPrice?: string;
   maxPrice?: string;
   stockStatus?: string;
   featured?: string;
+  onSale?: string;
+  colorIds?: string;
+  sizeIds?: string;
   tags?: string;
   startDate?: string;
   endDate?: string;

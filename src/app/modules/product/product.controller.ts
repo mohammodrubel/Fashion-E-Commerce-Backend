@@ -30,6 +30,16 @@ const GetAllProducts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const GetPriceRange = catchAsync(async (_req: Request, res: Response) => {
+  const result = await ProductService.GetPriceRange();
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Price range retrieve successful',
+    data: result,
+  });
+});
+
 const GetSingleProduct = catchAsync(async (req: Request, res: Response) => {
   const id = req.params?.id;
   const result = await ProductService.GetSingleProduct(id);
@@ -65,6 +75,7 @@ const DeleteProduct = catchAsync(async (req: Request, res: Response) => {
 export const ProductController = {
   CreateProduct,
   GetAllProducts,
+  GetPriceRange,
   GetSingleProduct,
   UpdateProduct,
   DeleteProduct,

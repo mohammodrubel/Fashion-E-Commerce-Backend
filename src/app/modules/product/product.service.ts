@@ -141,8 +141,33 @@ const buildWhere = (filters: ProductFilters): Prisma.ProductWhereInput => {
     });
   }
 
-  if (filters.category) {
+  if (filters.categoryIds) {
+    const ids = filters.categoryIds.split(',').map((id) => id.trim()).filter(Boolean);
+    if (ids.length) andConditions.push({ categoryId: { in: ids } });
+  } else if (filters.category) {
     andConditions.push({ categoryId: filters.category });
+  }
+
+  if (filters.colorIds) {
+    const ids = filters.colorIds.split(',').map((id) => id.trim()).filter(Boolean);
+    if (ids.length) {
+      andConditions.push({
+        variants: { some: { colorId: { in: ids }, isActive: true } },
+      });
+    }
+  }
+
+  if (filters.sizeIds) {
+    const ids = filters.sizeIds.split(',').map((id) => id.trim()).filter(Boolean);
+    if (ids.length) {
+      andConditions.push({
+        variants: { some: { sizeId: { in: ids }, isActive: true } },
+      });
+    }
+  }
+
+  if (toBoolean(filters.onSale)) {
+    andConditions.push({ salePrice: { not: null } });
   }
 
   if (filters.status) {
@@ -258,14 +283,17 @@ const CreateProduct = async (
 const GetAllProducts = async (filters: ProductFilters, options: PaginationOptions) => {
   const { page, limit, skip, sort, order } = calculatePagination(options);
   const where = buildWhere(filters);
-  const sortField = PRODUCT_SORT_FIELD_MAP[sort] ?? 'createdAt';
+  const orderBy: Prisma.ProductOrderByWithRelationInput | Prisma.ProductOrderByWithRelationInput[] =
+    sort === 'featured'
+      ? [{ isFeatured: 'desc' }, { createdAt: 'desc' }]
+      : { [PRODUCT_SORT_FIELD_MAP[sort] ?? 'createdAt']: order === 'asc' ? 'asc' : 'desc' };
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { [sortField]: order === 'asc' ? 'asc' : 'desc' },
+      orderBy,
       include: productIncludes,
     }),
     prisma.product.count({ where }),
@@ -274,6 +302,19 @@ const GetAllProducts = async (filters: ProductFilters, options: PaginationOption
   return {
     meta: { page, limit, total, totalPage: Math.ceil(total / limit) || 1 },
     data: products,
+  };
+};
+
+const GetPriceRange = async () => {
+  const result = await prisma.product.aggregate({
+    where: { status: ProductStatus.ACTIVE },
+    _min: { regularPrice: true },
+    _max: { regularPrice: true },
+  });
+
+  return {
+    min: result._min.regularPrice ? Number(result._min.regularPrice) : 0,
+    max: result._max.regularPrice ? Number(result._max.regularPrice) : 0,
   };
 };
 
@@ -422,6 +463,7 @@ const DeleteProduct = async (id: string) => {
 export const ProductService = {
   CreateProduct,
   GetAllProducts,
+  GetPriceRange,
   GetSingleProduct,
   UpdateProduct,
   DeleteProduct,

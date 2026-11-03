@@ -18,6 +18,8 @@ router
     ProductController.CreateProduct,
   );
 
+router.route('/price-range').get(ProductController.GetPriceRange);
+
 router
   .route('/:id')
   .get(ProductController.GetSingleProduct)
