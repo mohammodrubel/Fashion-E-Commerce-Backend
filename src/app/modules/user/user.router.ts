@@ -3,9 +3,23 @@ import { UserController } from './user.controller';
 import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { Role } from '@prisma/client';
+import { upload } from '../../utils/sendImageToCloudinary';
 import UserValidation from './user.validation';
 
 const router = Router();
+
+router
+  .route('/me')
+  .get(auth(), UserController.GetMe)
+  .patch(
+    auth(),
+    validateRequest(UserValidation.UpdateMeSchema),
+    UserController.UpdateMe,
+  );
+
+router
+  .route('/me/photo')
+  .patch(auth(), upload.single('photo'), UserController.UpdateMyPhoto);
 
 router
   .route('/')

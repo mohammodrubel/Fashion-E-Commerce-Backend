@@ -1,5 +1,6 @@
 import express from 'express';
 import validateRequest from '../../middlewares/validateRequest';
+import auth from '../../middlewares/auth';
 import AuthValidation from './auth.validation';
 import AuthController from './auth.controller';
 
@@ -19,9 +20,19 @@ router.post(
 
 router.patch(
   '/change-password',
+  auth(),
   validateRequest(AuthValidation.ChangePasswordSchema),
   AuthController.ChangePassword,
 );
+
+router.patch(
+  '/set-password',
+  auth(),
+  validateRequest(AuthValidation.SetPasswordSchema),
+  AuthController.SetPassword,
+);
+
+router.post('/logout', AuthController.Logout);
 
 router.post(
   '/forgot-password',

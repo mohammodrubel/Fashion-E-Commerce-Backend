@@ -75,6 +75,14 @@ const ResetPasswordSchema = z.object({
   }),
 });
 
+const SetPasswordSchema = z.object({
+  body: z.object({
+    new_password: z
+      .string({ required_error: 'New password is required' })
+      .min(6, 'Password must be at least 6 characters'),
+  }),
+});
+
 const GoogleLoginSchema = z.object({
   body: z.object({
     id_token: z.string({ required_error: 'id_token is required' }),
@@ -85,6 +93,7 @@ const AuthValidation = {
   LoginSchema,
   RegisterSchema,
   ChangePasswordSchema,
+  SetPasswordSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
   GoogleLoginSchema,

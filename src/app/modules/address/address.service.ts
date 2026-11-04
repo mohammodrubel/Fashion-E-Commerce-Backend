@@ -128,10 +128,57 @@ const DeleteAddress = async (id: string) => {
   await prisma.address.delete({ where: { id } });
 };
 
+const GetMyAddresses = async (userId: string) => {
+  return prisma.address.findMany({
+    where: { userId },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+  });
+};
+
+const CreateMyAddress = async (
+  userId: string,
+  payload: Omit<CreateAddressPayload, 'userId'>,
+) => {
+  return CreateAddress({ ...payload, userId });
+};
+
+const assertOwnAddress = async (userId: string, id: string) => {
+  const address = await prisma.address.findUnique({ where: { id } });
+  if (!address || address.userId !== userId) {
+    throw new AppError(httpStatus.NOT_FOUND, 'No address found with this id');
+  }
+  return address;
+};
+
+const UpdateMyAddress = async (
+  userId: string,
+  id: string,
+  payload: UpdateAddressPayload,
+) => {
+  await assertOwnAddress(userId, id);
+
+  const address = await prisma.address.update({ where: { id }, data: payload });
+
+  if (payload.isDefault) {
+    await unsetOtherDefaults(userId, id);
+  }
+
+  return address;
+};
+
+const DeleteMyAddress = async (userId: string, id: string) => {
+  await assertOwnAddress(userId, id);
+  await prisma.address.delete({ where: { id } });
+};
+
 export const AddressService = {
   CreateAddress,
   GetAllAddresses,
   GetSingleAddress,
   UpdateAddress,
   DeleteAddress,
+  GetMyAddresses,
+  CreateMyAddress,
+  UpdateMyAddress,
+  DeleteMyAddress,
 };

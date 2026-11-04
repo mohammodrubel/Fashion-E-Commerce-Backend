@@ -39,9 +39,18 @@ const UpdateUserSchema = z.object({
   }),
 });
 
+const UpdateMeSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).max(255).optional(),
+    email: z.string().email('Email must be a valid email').optional(),
+    phone: z.string().max(30).optional(),
+  }),
+});
+
 const UserValidation = {
   CreateUserSchema,
   UpdateUserSchema,
+  UpdateMeSchema,
 };
 
 export default UserValidation;

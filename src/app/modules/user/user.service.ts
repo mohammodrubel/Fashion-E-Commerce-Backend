@@ -5,7 +5,8 @@ import prisma from '../../utils/prisma';
 import AppError from '../../errors/AppError';
 import config from '../../config';
 import calculatePagination, { PaginationOptions } from '../../utils/pagination';
-import { CreateUserPayload, UpdateUserPayload, UserFilters } from './user.interface';
+import { sendImageToCloudinary } from '../../utils/sendImageToCloudinary';
+import { CreateUserPayload, UpdateMePayload, UpdateUserPayload, UserFilters } from './user.interface';
 
 // Never return passwordHash / reset-token fields to clients.
 const safeSelect = {
@@ -13,11 +14,20 @@ const safeSelect = {
   name: true,
   email: true,
   phone: true,
+  avatar: true,
   role: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
   _count: { select: { orders: true, addresses: true } },
+} satisfies Prisma.UserSelect;
+
+// Same as safeSelect but also tells the client whether a password exists,
+// without ever exposing the hash itself — used to toggle change vs. set
+// password UI (Google-authenticated users start with no password).
+const meSelect = {
+  ...safeSelect,
+  addresses: true,
 } satisfies Prisma.UserSelect;
 
 const buildWhere = (filters: UserFilters): Prisma.UserWhereInput => {
@@ -160,10 +170,65 @@ const DeleteUser = async (id: string) => {
   await prisma.user.delete({ where: { id } });
 };
 
+const GetMe = async (id: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { ...meSelect, passwordHash: true },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'No user found');
+  }
+
+  const { passwordHash, ...rest } = user;
+  return { ...rest, hasPassword: Boolean(passwordHash) };
+};
+
+const UpdateMe = async (id: string, payload: UpdateMePayload) => {
+  if (payload.email) {
+    const isDuplicate = await prisma.user.findFirst({
+      where: { id: { not: id }, email: payload.email },
+    });
+    if (isDuplicate) {
+      throw new AppError(httpStatus.CONFLICT, 'Email already in use');
+    }
+  }
+
+  const user = await prisma.user.update({
+    where: { id },
+    data: {
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone,
+    },
+    select: { ...meSelect, passwordHash: true },
+  });
+
+  const { passwordHash, ...rest } = user;
+  return { ...rest, hasPassword: Boolean(passwordHash) };
+};
+
+const UpdateMyPhoto = async (id: string, file?: Express.Multer.File) => {
+  if (!file) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'No photo file provided');
+  }
+
+  const url = await sendImageToCloudinary(file.path, file.filename);
+
+  return prisma.user.update({
+    where: { id },
+    data: { avatar: url },
+    select: safeSelect,
+  });
+};
+
 export const UserService = {
   GetAllUsers,
   GetSingleUser,
   CreateUser,
   UpdateUser,
   DeleteUser,
+  GetMe,
+  UpdateMe,
+  UpdateMyPhoto,
 };

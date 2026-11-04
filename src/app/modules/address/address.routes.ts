@@ -8,6 +8,24 @@ import { AddressController } from './address.controller';
 const router = express.Router();
 
 router
+  .route('/me')
+  .get(auth(), AddressController.GetMyAddresses)
+  .post(
+    auth(),
+    validateRequest(AddressValidation.CreateMyAddressSchema),
+    AddressController.CreateMyAddress,
+  );
+
+router
+  .route('/me/:id')
+  .patch(
+    auth(),
+    validateRequest(AddressValidation.UpdateAddressSchema),
+    AddressController.UpdateMyAddress,
+  )
+  .delete(auth(), AddressController.DeleteMyAddress);
+
+router
   .route('/')
   .get(auth(Role.ADMIN), AddressController.GetAllAddresses)
   .post(

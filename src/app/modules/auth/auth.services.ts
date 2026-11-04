@@ -18,6 +18,13 @@ const Login = async (payload: ILogin) => {
     throw new AppError(httpStatus.NOT_FOUND, 'No user found with this email');
   }
 
+  if (!user.passwordHash) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      'This account has no password set. Sign in with Google or use "Forgot password".',
+    );
+  }
+
   const isPasswordMatched = await bcrypt.compare(
     payload.password,
     user.passwordHash,
@@ -109,6 +116,13 @@ const ChangePassword = async (
     throw new AppError(httpStatus.NOT_FOUND, 'No user found');
   }
 
+  if (!isUserValid.passwordHash) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'No password set on this account yet. Use "Set password" instead.',
+    );
+  }
+
   const isPasswordMatched = await bcrypt.compare(
     payload.old_password,
     isUserValid.passwordHash,
@@ -116,6 +130,36 @@ const ChangePassword = async (
 
   if (!isPasswordMatched) {
     throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid password');
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    payload.new_password,
+    Number(config.bcrypt_salt_rounds),
+  );
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: hashedPassword },
+  });
+};
+
+const SetPassword = async (
+  payload: { new_password: string },
+  user: JwtPayload,
+) => {
+  const isUserValid = await prisma.user.findFirst({
+    where: { id: user.id },
+  });
+
+  if (!isUserValid) {
+    throw new AppError(httpStatus.NOT_FOUND, 'No user found');
+  }
+
+  if (isUserValid.passwordHash) {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      'A password is already set on this account. Use "Change password" instead.',
+    );
   }
 
   const hashedPassword = await bcrypt.hash(
@@ -208,7 +252,7 @@ const GoogleLogin = async (payload: IGoogleLogin) => {
       data: {
         name: googleUser.name || googleUser.email,
         email: googleUser.email,
-        passwordHash: '',
+        passwordHash: null,
         role: 'USER',
       },
     });
@@ -240,6 +284,7 @@ const AuthService = {
   Login,
   Register,
   ChangePassword,
+  SetPassword,
   ForgotPassword,
   ResetPassword,
   GoogleLogin,

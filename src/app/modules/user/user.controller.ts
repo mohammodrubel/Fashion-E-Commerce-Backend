@@ -62,10 +62,43 @@ const DeleteUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const GetMe = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.GetMe(req.user.id);
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Profile retrieve successful',
+    data: result,
+  });
+});
+
+const UpdateMe = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.UpdateMe(req.user.id, req.body);
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Profile updated successfully',
+    data: result,
+  });
+});
+
+const UpdateMyPhoto = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.UpdateMyPhoto(req.user.id, req.file);
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Photo updated successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   GetAllUsers,
   GetSingleUser,
   CreateUser,
   UpdateUser,
   DeleteUser,
+  GetMe,
+  UpdateMe,
+  UpdateMyPhoto,
 };

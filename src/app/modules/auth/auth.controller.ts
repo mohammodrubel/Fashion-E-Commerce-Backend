@@ -55,6 +55,30 @@ const ChangePassword = catchAsync(async (req, res) => {
   });
 });
 
+const SetPassword = catchAsync(async (req, res) => {
+  await AuthService.SetPassword(req.body, req.user);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Password set successfully',
+  });
+});
+
+const Logout = catchAsync(async (req, res) => {
+  res.clearCookie('REFRESH_TOKEN', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+  });
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Logged out successfully',
+  });
+});
+
 const ForgotPassword = catchAsync(async (req, res) => {
   await AuthService.ForgotPassword(req.body.email);
 
@@ -99,6 +123,8 @@ const AuthController = {
   Login,
   Register,
   ChangePassword,
+  SetPassword,
+  Logout,
   ForgotPassword,
   ResetPassword,
   GoogleLogin,

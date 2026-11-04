@@ -28,6 +28,12 @@ export type UpdateUserPayload = {
   isActive?: boolean;
 };
 
+export type UpdateMePayload = {
+  name?: string;
+  email?: string;
+  phone?: string;
+};
+
 export type UserFilters = {
   searchTerm?: string;
   role?: string;
