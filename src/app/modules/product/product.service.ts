@@ -318,11 +318,14 @@ const GetPriceRange = async () => {
   };
 };
 
-const GetSingleProduct = async (id: string) => {
-  const product = await prisma.product.findUnique({ where: { id }, include: productIncludes });
+const GetSingleProduct = async (idOrSlug: string) => {
+  const product = await prisma.product.findFirst({
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    include: productIncludes,
+  });
 
   if (!product) {
-    throw new AppError(httpStatus.NOT_FOUND, 'No product found with this id');
+    throw new AppError(httpStatus.NOT_FOUND, 'No product found with this id or slug');
   }
 
   return product;
