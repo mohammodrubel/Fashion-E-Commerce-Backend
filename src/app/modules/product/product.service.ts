@@ -450,7 +450,7 @@ const UpdateProduct = async (
       },
       include: productIncludes,
     });
-  });
+  }, { timeout: 20000, maxWait: 10000 });
 };
 
 const DeleteProduct = async (id: string) => {
