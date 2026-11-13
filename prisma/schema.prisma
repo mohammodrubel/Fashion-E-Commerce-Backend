@@ -27,22 +27,6 @@ enum OrderStatus {
   RETURNED
 }
 
-enum PaymentMethod {
-  COD
-  BKASH
-  NAGAD
-  CARD
-  BANK_TRANSFER
-}
-
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  REFUNDED
-  PARTIALLY_REFUNDED
-}
-
 enum StockMovementType {
   RESTOCK
   SALE
@@ -127,7 +111,6 @@ model Product {
   id               String        @id @default(cuid())
   name             String
   slug             String        @unique
-  shortDescription String?
   description      String?
   sku              String?       @unique
   regularPrice     Decimal       @db.Decimal(12, 2)
@@ -223,7 +206,6 @@ model Order {
 
   user            User        @relation(fields: [userId], references: [id])
   items           OrderItem[]
-  payments        Payment[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -252,24 +234,6 @@ model OrderItem {
 
   @@index([orderId])
   @@index([variantId])
-}
-
-model Payment {
-  id               String        @id @default(cuid())
-  orderId          String
-  method           PaymentMethod
-  status           PaymentStatus @default(PENDING)
-  amount           Decimal       @db.Decimal(12, 2)
-  transactionId    String?       @unique
-  gatewayReference String?
-  paidAt           DateTime?
-
-  order            Order         @relation(fields: [orderId], references: [id])
-
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  @@index([orderId, status])
 }
 
 model StockMovement {

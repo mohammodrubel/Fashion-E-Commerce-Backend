@@ -4,7 +4,7 @@ export type VariantInput = {
   id?: string;
   sizeId: string;
   colorId: string;
-  sku: string;
+  sku?: string; // ignored: generated server-side
   price: number;
   stock?: number;
   isActive?: boolean;
@@ -13,7 +13,6 @@ export type VariantInput = {
 export type CreateProductPayload = {
   name: string;
   slug?: string;
-  shortDescription?: string;
   description?: string;
   categoryId: string;
   sku?: string;

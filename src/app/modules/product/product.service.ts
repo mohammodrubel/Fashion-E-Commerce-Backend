@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import httpStatus from 'http-status';
 import { Prisma, ProductStatus } from '@prisma/client';
 import prisma from '../../utils/prisma';
@@ -63,22 +64,41 @@ const parseVariants = (variants?: string): VariantInput[] | undefined => {
       !variant ||
       typeof variant.sizeId !== 'string' ||
       typeof variant.colorId !== 'string' ||
-      typeof variant.sku !== 'string' ||
       typeof variant.price !== 'number'
     ) {
       throw new AppError(
         httpStatus.BAD_REQUEST,
-        `Variant at index ${index} must include sizeId, colorId, sku and price`,
+        `Variant at index ${index} must include sizeId, colorId and price`,
       );
     }
   });
 
-  const skus = parsed.map((variant) => variant.sku);
-  if (new Set(skus).size !== skus.length) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Variant SKUs must be unique within a product');
+  return parsed as VariantInput[];
+};
+
+// SKUs are always generated server-side; any client-sent value is ignored.
+// Random suffix + DB check (+ unique constraint as final guard) keeps them collision-safe.
+const generateVariantSkus = async (productSlug: string, count: number): Promise<string[]> => {
+  const prefix = productSlug.replace(/[^a-z0-9]/gi, '').slice(0, 6).toUpperCase() || 'PRD';
+  const skus = new Set<string>();
+
+  while (skus.size < count) {
+    const candidates = new Set<string>();
+    while (skus.size + candidates.size < count) {
+      const candidate = `${prefix}-${randomBytes(4).toString('hex').toUpperCase()}`;
+      if (!skus.has(candidate)) candidates.add(candidate);
+    }
+    const taken = await prisma.productVariant.findMany({
+      where: { sku: { in: [...candidates] } },
+      select: { sku: true },
+    });
+    const takenSet = new Set(taken.map((t) => t.sku));
+    candidates.forEach((c) => {
+      if (!takenSet.has(c)) skus.add(c);
+    });
   }
 
-  return parsed as VariantInput[];
+  return [...skus];
 };
 
 const parseIdArray = (value?: string): string[] | undefined => {
@@ -242,6 +262,7 @@ const CreateProduct = async (
   const tags = parseTags(payload.tags) ?? [];
   const variants = parseVariants(payload.variants) ?? [];
   await assertSizesAndColorsExist(variants);
+  const variantSkus = await generateVariantSkus(slug, variants.length);
 
   const imageUrls = await uploadImages(files);
 
@@ -249,7 +270,6 @@ const CreateProduct = async (
     data: {
       name: payload.name,
       slug,
-      shortDescription: payload.shortDescription,
       description: payload.description,
       categoryId: payload.categoryId,
       sku: payload.sku,
@@ -266,10 +286,10 @@ const CreateProduct = async (
         create: imageUrls.map((url, index) => ({ url, sortOrder: index })),
       },
       variants: {
-        create: variants.map((variant) => ({
+        create: variants.map((variant, index) => ({
           sizeId: variant.sizeId,
           colorId: variant.colorId,
-          sku: variant.sku,
+          sku: variantSkus[index],
           price: variant.price,
           stock: variant.stock ?? 0,
           isActive: toBoolean(variant.isActive) ?? true,
@@ -371,6 +391,10 @@ const UpdateProduct = async (
   if (variants) {
     await assertSizesAndColorsExist(variants);
   }
+  const newVariantCount = variants?.filter((v) => !v.id).length ?? 0;
+  const newVariantSkus = newVariantCount
+    ? await generateVariantSkus(slug ?? existingProduct.slug, newVariantCount)
+    : [];
   const removeImageIds = parseIdArray(payload.removeImageIds) ?? [];
   const removeVariantIds = parseIdArray(payload.removeVariantIds) ?? [];
   const newImageUrls = await uploadImages(files);
@@ -407,7 +431,6 @@ const UpdateProduct = async (
             data: {
               sizeId: variant.sizeId,
               colorId: variant.colorId,
-              sku: variant.sku,
               price: variant.price,
               stock: variant.stock ?? 0,
               isActive: toBoolean(variant.isActive) ?? true,
@@ -419,7 +442,7 @@ const UpdateProduct = async (
               productId: id,
               sizeId: variant.sizeId,
               colorId: variant.colorId,
-              sku: variant.sku,
+              sku: newVariantSkus.shift() as string,
               price: variant.price,
               stock: variant.stock ?? 0,
               isActive: toBoolean(variant.isActive) ?? true,
@@ -434,7 +457,6 @@ const UpdateProduct = async (
       data: {
         name: payload.name,
         slug,
-        shortDescription: payload.shortDescription,
         description: payload.description,
         categoryId: payload.categoryId,
         sku: payload.sku,

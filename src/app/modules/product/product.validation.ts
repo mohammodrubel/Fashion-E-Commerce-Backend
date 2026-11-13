@@ -28,10 +28,6 @@ const CreateProductSchema = z.object({
       .min(2, 'Slug must be at least 2 characters')
       .max(220, 'Slug must be at most 220 characters')
       .optional(),
-    shortDescription: z
-      .string({ invalid_type_error: 'Short description must be a string' })
-      .max(500, 'Short description must be at most 500 characters')
-      .optional(),
     description: z
       .string({ invalid_type_error: 'Description must be a string' })
       .max(5000, 'Description must be at most 5000 characters')
@@ -90,10 +86,6 @@ const UpdateProductSchema = z.object({
       .string({ invalid_type_error: 'Slug must be a string' })
       .min(2, 'Slug must be at least 2 characters')
       .max(220, 'Slug must be at most 220 characters')
-      .optional(),
-    shortDescription: z
-      .string({ invalid_type_error: 'Short description must be a string' })
-      .max(500, 'Short description must be at most 500 characters')
       .optional(),
     description: z
       .string({ invalid_type_error: 'Description must be a string' })

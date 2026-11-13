@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "legacy";
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'USER');
 
@@ -8,12 +11,6 @@ CREATE TYPE "ProductStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'DRAFT');
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED');
 
 -- CreateEnum
-CREATE TYPE "PaymentMethod" AS ENUM ('COD', 'BKASH', 'NAGAD', 'CARD', 'BANK_TRANSFER');
-
--- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED');
-
--- CreateEnum
 CREATE TYPE "StockMovementType" AS ENUM ('RESTOCK', 'SALE', 'RETURN', 'ADJUSTMENT', 'DAMAGE', 'CANCELLATION');
 
 -- CreateTable
@@ -21,10 +18,13 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "passwordHash" TEXT NOT NULL,
+    "passwordHash" TEXT,
+    "avatar" TEXT,
     "phone" TEXT,
     "role" "Role" NOT NULL DEFAULT 'USER',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "resetPasswordToken" TEXT,
+    "resetPasswordTokenExpiry" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -49,6 +49,23 @@ CREATE TABLE "Address" (
 );
 
 -- CreateTable
+CREATE TABLE "HeroBanner" (
+    "id" TEXT NOT NULL,
+    "desktopImage" TEXT NOT NULL,
+    "mobileImage" TEXT,
+    "collectionLabel" TEXT,
+    "heading" TEXT NOT NULL,
+    "seasonYear" TEXT,
+    "discoverText" TEXT,
+    "backgroundColor" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "HeroBanner_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Category" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -68,6 +85,15 @@ CREATE TABLE "Product" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
+    "sku" TEXT,
+    "regularPrice" DECIMAL(12,2) NOT NULL,
+    "salePrice" DECIMAL(12,2),
+    "costPrice" DECIMAL(12,2),
+    "stockQuantity" INTEGER NOT NULL DEFAULT 0,
+    "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "isFeatured" BOOLEAN NOT NULL DEFAULT false,
+    "seoTitle" TEXT,
+    "seoDescription" TEXT,
     "status" "ProductStatus" NOT NULL DEFAULT 'DRAFT',
     "categoryId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -160,22 +186,6 @@ CREATE TABLE "OrderItem" (
 );
 
 -- CreateTable
-CREATE TABLE "Payment" (
-    "id" TEXT NOT NULL,
-    "orderId" TEXT NOT NULL,
-    "method" "PaymentMethod" NOT NULL,
-    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
-    "amount" DECIMAL(12,2) NOT NULL,
-    "transactionId" TEXT,
-    "gatewayReference" TEXT,
-    "paidAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "StockMovement" (
     "id" TEXT NOT NULL,
     "variantId" TEXT NOT NULL,
@@ -195,6 +205,9 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE INDEX "Address_userId_idx" ON "Address"("userId");
 
 -- CreateIndex
+CREATE INDEX "HeroBanner_isActive_idx" ON "HeroBanner"("isActive");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
 
 -- CreateIndex
@@ -204,7 +217,16 @@ CREATE UNIQUE INDEX "Category_slug_key" ON "Category"("slug");
 CREATE UNIQUE INDEX "Product_slug_key" ON "Product"("slug");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Product_sku_key" ON "Product"("sku");
+
+-- CreateIndex
 CREATE INDEX "Product_categoryId_status_idx" ON "Product"("categoryId", "status");
+
+-- CreateIndex
+CREATE INDEX "Product_isFeatured_idx" ON "Product"("isFeatured");
+
+-- CreateIndex
+CREATE INDEX "Product_status_idx" ON "Product"("status");
 
 -- CreateIndex
 CREATE INDEX "ProductImage_productId_sortOrder_idx" ON "ProductImage"("productId", "sortOrder");
@@ -240,12 +262,6 @@ CREATE INDEX "OrderItem_orderId_idx" ON "OrderItem"("orderId");
 CREATE INDEX "OrderItem_variantId_idx" ON "OrderItem"("variantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Payment_transactionId_key" ON "Payment"("transactionId");
-
--- CreateIndex
-CREATE INDEX "Payment_orderId_status_idx" ON "Payment"("orderId", "status");
-
--- CreateIndex
 CREATE INDEX "StockMovement_variantId_createdAt_idx" ON "StockMovement"("variantId", "createdAt");
 
 -- AddForeignKey
@@ -276,10 +292,8 @@ ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("or
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "StockMovement" ADD CONSTRAINT "StockMovement_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StockMovement" ADD CONSTRAINT "StockMovement_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

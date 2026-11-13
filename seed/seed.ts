@@ -1,58 +1,38 @@
-import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import prisma from '../src/app/utils/prisma';
+import { Role } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const ADMIN_NAME = process.env.SEED_ADMIN_NAME || 'Admin';
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@fashion.com';
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@123456';
 
-const seedSuperAdmin = async () => {
-  const organizationEmail = 'admin@inventory.com';
-  const adminEmail = 'superadmin@inventory.com';
-  const password = '123456';
+const seedAdmin = async () => {
+  const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, saltRounds);
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const organization = await prisma.organization.upsert({
-    where: {
-      slug: 'main-organization',
-    },
-
+  // update is empty on purpose: re-running the seed never overwrites an
+  // existing admin's password.
+  await prisma.user.upsert({
+    where: { email: ADMIN_EMAIL },
     update: {},
-
     create: {
-      name: 'Main Organization',
-      slug: 'main-organization',
-      email: organizationEmail,
-      phone: '+8801712345678',
-      address: 'Dhaka, Bangladesh',
+      name: ADMIN_NAME,
+      email: ADMIN_EMAIL,
+      passwordHash,
+      role: Role.ADMIN,
       isActive: true,
-
-      users: {
-        create: {
-          name: 'Super Admin',
-          email: adminEmail,
-          password: hashedPassword,
-          role: Role.SUPER_ADMIN,
-          isActive: true,
-        },
-      },
-    },
-
-    include: {
-      users: true,
     },
   });
-
-  console.log('✅ Super Admin Seeded Successfully');
-  console.log('Organization:', organization.name);
-  console.log('Email:', adminEmail);
-  console.log('Password:', password);
+  console.log(`Admin ready: ${ADMIN_EMAIL}`);
 };
 
 const main = async () => {
   try {
-    await seedSuperAdmin();
+    await seedAdmin();
+    console.log('Seed completed');
   } catch (error) {
-    console.error('❌ Seed failed:', error);
-    process.exit(1);
+    console.error('Seed failed:', error);
+    process.exitCode = 1;
   } finally {
     await prisma.$disconnect();
   }
